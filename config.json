@@ -1,0 +1,77 @@
+{
+  "data": {
+    "stock_data_path_d": "/home/mrierari/projects/stocksv2/stocks_data/d",
+    "stock_data_path_h": "/home/mrierari/projects/stocksv2/stocks_data/h",
+    "min_volume": 200000,
+    "min_price": 2.0,
+    "max_price": 10.0
+  },
+  "fingerprints": {
+    "n_days": 3,
+    "percent_change": 0.1,
+    "max_grouping_expressions": 3,
+    "max_total_combinations": 50000,
+    "output_file": "fingerprint_results.csv"
+  },
+  "analyzer": {
+    "max_selected_expressions": 10,
+    "min_difference": 0.1,
+    "max_expression_usage": 1,
+    "output_buy_file": "fingerprint_results_file_selection_buy.csv",
+    "output_sell_file": "fingerprint_results_file_selection_sell.csv",
+    "exclude_patterns": [
+      "volatility"
+    ]
+  },
+  "evaluation": {
+    "min_expressions_for_signal": 6,
+    "n_dates_back": 20,
+    "n_dates_forward": 3,
+    "output_prefix": "output_",
+    "max_stocks_printed": 20000
+  },
+  "indicators": {
+    "sma_periods": [
+      3,
+      5,
+      10,
+      20
+    ],
+    "ema_periods": [
+      12,
+      26
+    ],
+    "rsi_period": 14,
+    "macd_fast": 12,
+    "macd_slow": 26,
+    "macd_signal": 9,
+    "bollinger_periods": [
+      15,
+      20,
+      25
+    ],
+    "bollinger_std": 2,
+    "stochastic_k": 14,
+    "stochastic_d": 3,
+    "atr_periods": [
+      14,
+      20
+    ],
+    "obv_enabled": true,
+    "volume_sma_periods": [
+      5,
+      10,
+      20
+    ],
+    "williams_r_period": 14,
+    "cci_period": 20,
+    "mfi_period": 14,
+    "adx_period": 14,
+    "psar_af": 0.02,
+    "psar_max_af": 0.2
+  },
+  "validation": {
+    "recent_dates_count": 20,
+    "false_hit_threshold": 0.5
+  }
+}
