@@ -890,6 +890,48 @@ EXPRESSIONS = {
     # Volume-price confirmation
     'volume_price_confirm_5d': lambda df: volume_price_confirmation(df, 5),
     'volume_price_confirm_10d': lambda df: volume_price_confirmation(df, 10),
+    
+    # === EXPERT-RECOMMENDED BUY SIGNAL COMBINATIONS ===
+    
+    # Strong bullish momentum (RSI + MACD confirmation)
+    'rsi_macd_bullish_momentum': lambda df: ((df['rsi_14'] > 50) & (df['rsi_14'] < 70) & (df['macd_line'] > df['macd_signal']) & (df['macd_line'] > df['macd_line'].shift(1))).astype(int),
+    'rsi_oversold_macd_bullish': lambda df: ((df['rsi_14'] < 35) & (df['rsi_14'] > df['rsi_14'].shift(1)) & (df['macd_line'] > df['macd_signal'])).astype(int),
+    
+    # ADX trend strength with directional bias
+    'adx_strong_bullish_trend': lambda df: ((df['adx_14'] > 25) & (df['plus_di_14'] > df['minus_di_14']) & (df['plus_di_14'] > df['plus_di_14'].shift(1))).astype(int),
+    'adx_trend_reversal_bull': lambda df: ((df['adx_14'] > 20) & (df['plus_di_14'] > df['minus_di_14']) & (df['plus_di_14'].shift(1) <= df['minus_di_14'].shift(1))).astype(int),
+    
+    # Williams %R oversold bounce with confirmation
+    'williams_oversold_bounce': lambda df: ((df['williams_r_14'] < -80) & (df['williams_r_14'] > df['williams_r_14'].shift(1)) & (df['close'] > df['close'].shift(1))).astype(int),
+    'williams_momentum_shift': lambda df: ((df['williams_r_14'] < -50) & (df['williams_r_14'] > df['williams_r_14'].shift(2)) & (df['volume'] > df['volume_sma_10'])).astype(int),
+    
+    # CCI momentum with price confirmation
+    'cci_bullish_momentum': lambda df: ((df['cci_20'] > 0) & (df['cci_20'] > df['cci_20'].shift(1)) & (df['close'] > df['sma_20'])).astype(int),
+    'cci_oversold_recovery': lambda df: ((df['cci_20'] < -100) & (df['cci_20'] > df['cci_20'].shift(1)) & (df['rsi_14'] > 30)).astype(int),
+    
+    # MFI money flow with price action
+    'mfi_bullish_flow': lambda df: ((df['mfi_14'] > 50) & (df['mfi_14'] > df['mfi_14'].shift(1)) & (df['close'] > df['ema_12'])).astype(int),
+    'mfi_oversold_reversal': lambda df: ((df['mfi_14'] < 30) & (df['mfi_14'] > df['mfi_14'].shift(1)) & (df['volume'] > df['volume_sma_20'] * 1.2)).astype(int),
+    
+    # Multi-indicator bullish convergence (high probability setups)
+    'triple_bullish_convergence': lambda df: ((df['rsi_14'] > 50) & (df['macd_line'] > df['macd_signal']) & (df['adx_14'] > 25) & (df['plus_di_14'] > df['minus_di_14'])).astype(int),
+    'oversold_multi_bounce': lambda df: ((df['rsi_14'] < 35) & (df['williams_r_14'] < -70) & (df['cci_20'] < -100) & (df['mfi_14'] < 40) & (df['close'] > df['close'].shift(1))).astype(int),
+    
+    # Volume-confirmed momentum breakouts
+    'volume_momentum_breakout': lambda df: ((df['close'] > df['sma_20']) & (df['rsi_14'] > 55) & (df['volume'] > df['volume_sma_20'] * 1.5) & (df['macd_line'] > df['macd_signal'])).astype(int),
+    'high_volume_bullish_cross': lambda df: ((df['ema_12'] > df['ema_26']) & (df['ema_12'].shift(1) <= df['ema_26'].shift(1)) & (df['volume'] > df['volume_sma_10'] * 2.0)).astype(int),
+    
+    # Trend continuation patterns
+    'bullish_trend_continuation': lambda df: ((df['sma_5'] > df['sma_20']) & (df['rsi_14'] > 40) & (df['rsi_14'] < 70) & (df['adx_14'] > 20) & (df['close'] > df['sma_5'])).astype(int),
+    'momentum_acceleration': lambda df: ((df['roc_5'] > 2) & (df['roc_10'] > 0) & (df['rsi_14'] > df['rsi_14'].shift(2)) & (df['macd_histogram'] > df['macd_histogram'].shift(1))).astype(int),
+    
+    # Channel and support breakouts
+    'bollinger_squeeze_breakout': lambda df: ((df['close'] > df['bb_upper_20']) & (df['volume'] > df['volume_sma_20'] * 1.3) & (df['rsi_14'] > 50)).astype(int),
+    'support_bounce_confirmation': lambda df: ((df['close'] > df['bb_lower_20'] * 1.02) & (df['rsi_14'] < 40) & (df['rsi_14'] > df['rsi_14'].shift(1)) & (df['williams_r_14'] > df['williams_r_14'].shift(1))).astype(int),
+    
+    # Early trend reversal signals
+    'early_bullish_reversal': lambda df: ((df['rsi_14'] < 30) & (df['rsi_14'] > df['rsi_14'].shift(1)) & (df['macd_histogram'] > df['macd_histogram'].shift(1)) & (df['cci_20'] > df['cci_20'].shift(1))).astype(int),
+    'momentum_divergence_bullish': lambda df: ((df['close'] < df['close'].shift(5)) & (df['rsi_14'] > df['rsi_14'].shift(5)) & (df['macd_line'] > df['macd_line'].shift(5))).astype(int),
 }
 
 

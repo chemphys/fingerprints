@@ -41,41 +41,41 @@ def filter_low_scoring_expressions(results_file='fingerprint_results.csv', thres
 
 
 def generate_expression_combinations(expression_names, max_combinations=3, max_total_combinations=50000):
-    """Generate combinations of expressions up to max_combinations, limited by max_total_combinations."""
+    """Generate combinations of expressions up to max_combinations, limited by max_total_combinations.
+    Prioritizes single expressions first, then 2-expression, then 3-expression combinations sequentially."""
     all_combinations = []
     
-    # Add individual expressions
-    for expr in expression_names:
-        all_combinations.append([expr])
-    
-    print(f"Added {len(expression_names)} individual expressions")
-    
-    # Add combinations of 2, 3, etc. up to max_combinations
-    for combo_size in range(2, max_combinations + 1):
-        combos_for_size = list(combinations(expression_names, combo_size))
-        
-        # If too many combinations, sample a subset
-        max_for_size = max_total_combinations // combo_size  # Distribute budget across sizes
-        if len(combos_for_size) > max_for_size:
-            print(f"Limiting {combo_size}-expression combinations to {max_for_size} (from {len(combos_for_size)} possible)")
-            # Sample combinations to get a diverse set
-            import random
-            random.seed(42)  # For reproducibility
-            combos_for_size = random.sample(combos_for_size, max_for_size)
-        
-        for combo in combos_for_size:
-            all_combinations.append(list(combo))
-        
-        print(f"Added {len(combos_for_size)} combinations of size {combo_size}")
-        
-        # Stop if we've reached the total limit
-        if len(all_combinations) >= max_total_combinations:
-            print(f"Reached maximum total combinations limit of {max_total_combinations}")
-            break
-    
-    # Trim to exact limit if needed
-    if len(all_combinations) > max_total_combinations:
-        all_combinations = all_combinations[:max_total_combinations]
+    # Add combinations sequentially by size until we reach the limit
+    for combo_size in range(1, max_combinations + 1):
+        if combo_size == 1:
+            # Add all individual expressions
+            for expr in expression_names:
+                all_combinations.append([expr])
+            print(f"Added {len(expression_names)} individual expressions")
+        else:
+            # Generate all combinations of current size
+            combos_for_size = list(combinations(expression_names, combo_size))
+            
+            # Check how many we can add without exceeding the limit
+            remaining_slots = max_total_combinations - len(all_combinations)
+            if remaining_slots <= 0:
+                print(f"Reached maximum total combinations limit of {max_total_combinations}")
+                break
+            
+            # Add combinations up to the remaining limit
+            if len(combos_for_size) <= remaining_slots:
+                # Add all combinations of this size
+                for combo in combos_for_size:
+                    all_combinations.append(list(combo))
+                print(f"Added all {len(combos_for_size)} combinations of size {combo_size}")
+            else:
+                # Add as many as we can fit, randomly sampled for diversity
+                print(f"Adding {remaining_slots} out of {len(combos_for_size)} possible {combo_size}-expression combinations")
+                random.shuffle(combos_for_size)  # Shuffle for randomness
+                for combo in combos_for_size[:remaining_slots]:
+                    all_combinations.append(list(combo))
+                print(f"Reached maximum total combinations limit of {max_total_combinations}")
+                break
     
     print(f"Generated {len(all_combinations)} expression combinations (1 to {max_combinations} expressions)")
     return all_combinations
@@ -320,6 +320,7 @@ def main():
     fp_config = config['fingerprints']
     max_grouping_expressions = fp_config.get('max_grouping_expressions', 3)
     max_total_combinations = fp_config.get('max_total_combinations', 50000)
+    max_stocks = fp_config.get('max_stocks', None)
     
     # Create dated output filename
     base_filename = fp_config.get('output_file', 'fingerprint_results.csv')
@@ -328,6 +329,8 @@ def main():
     
     print(f"Maximum expression combinations: {max_grouping_expressions}")
     print(f"Maximum total combinations: {max_total_combinations:,}")
+    if max_stocks:
+        print(f"Maximum stocks to process: {max_stocks}")
     print(f"Results will be saved to: {output_file}")
     
     # Filter low-scoring expressions
@@ -343,7 +346,7 @@ def main():
     print(f"Will analyze {num_combinations} expression combinations")
     
     # Find all CSV files
-    csv_files = glob.glob(os.path.join(data_path, "*.csv"))
+    csv_files = sorted(glob.glob(os.path.join(data_path, "*.csv")))
     if not csv_files:
         print(f"No CSV files found in {data_path}")
         return
@@ -364,6 +367,10 @@ def main():
     
     # Process each stock
     for file_path in csv_files:
+        # Check if we've reached the maximum number of stocks to process
+        if max_stocks and processed_stocks >= max_stocks:
+            print(f"Reached maximum stocks limit of {max_stocks}. Stopping processing.")
+            break
         try:
             # Load stock data for criteria check
             df = load_stock_data(file_path)

@@ -343,16 +343,49 @@ def calculate_all_indicators(df, config):
     df = calculate_price_change(df)
     df = calculate_volatility(df)
     
-    # Calculate advanced indicators
-    df = calculate_cci(df, 20)
-    df = calculate_adx(df, 14)
-    df = calculate_roc(df, [5, 10, 20])
-    df = calculate_williams_r(df, 14)
-    df = calculate_aroon(df, 25)
-    df = calculate_mfi(df, 14)
-    df = calculate_tsi(df, 25, 13)
-    df = calculate_ultimate_oscillator(df, 7, 14, 28)
-    df = calculate_keltner_channels(df, 20, 2)
-    df = calculate_donchian_channels(df, 20)
+    # Calculate advanced indicators based on config
+    if 'cci_period' in indicators_config:
+        df = calculate_cci(df, indicators_config['cci_period'])
+    
+    if 'adx_period' in indicators_config:
+        df = calculate_adx(df, indicators_config['adx_period'])
+    
+    if 'roc_periods' in indicators_config:
+        df = calculate_roc(df, indicators_config['roc_periods'])
+    else:
+        df = calculate_roc(df, [5, 10, 20])  # Default periods
+    
+    if 'williams_r_period' in indicators_config:
+        df = calculate_williams_r(df, indicators_config['williams_r_period'])
+    
+    if 'aroon_period' in indicators_config:
+        df = calculate_aroon(df, indicators_config['aroon_period'])
+    else:
+        df = calculate_aroon(df, 25)  # Default period
+    
+    if 'mfi_period' in indicators_config:
+        df = calculate_mfi(df, indicators_config['mfi_period'])
+    
+    if 'tsi_long' in indicators_config and 'tsi_short' in indicators_config:
+        df = calculate_tsi(df, indicators_config['tsi_long'], indicators_config['tsi_short'])
+    else:
+        df = calculate_tsi(df, 25, 13)  # Default periods
+    
+    if 'uo_periods' in indicators_config and len(indicators_config['uo_periods']) >= 3:
+        periods = indicators_config['uo_periods']
+        df = calculate_ultimate_oscillator(df, periods[0], periods[1], periods[2])
+    else:
+        df = calculate_ultimate_oscillator(df, 7, 14, 28)  # Default periods
+    
+    if 'keltner_period' in indicators_config:
+        multiplier = indicators_config.get('keltner_multiplier', 2)
+        df = calculate_keltner_channels(df, indicators_config['keltner_period'], multiplier)
+    else:
+        df = calculate_keltner_channels(df, 20, 2)  # Default
+    
+    if 'donchian_period' in indicators_config:
+        df = calculate_donchian_channels(df, indicators_config['donchian_period'])
+    else:
+        df = calculate_donchian_channels(df, 20)  # Default
     
     return df

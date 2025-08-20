@@ -10,15 +10,19 @@
     "n_days": 3,
     "percent_change": 0.1,
     "max_grouping_expressions": 3,
-    "max_total_combinations": 50000,
+    "max_total_combinations": 100000,
+    "max_stocks": null,
     "output_file": "fingerprint_results.csv"
   },
   "analyzer": {
     "max_selected_expressions": 10,
-    "min_difference": 0.1,
+    "min_difference_buy": 0.1,
+    "min_difference_sell": 0.03,
     "max_expression_usage": 1,
     "output_buy_file": "fingerprint_results_file_selection_buy.csv",
     "output_sell_file": "fingerprint_results_file_selection_sell.csv",
+    "output_buy_diverse_file": "fingerprint_results_diverse_selection_buy.csv",
+    "output_sell_diverse_file": "fingerprint_results_diverse_selection_sell.csv",
     "exclude_patterns": [
       "volatility"
     ]
@@ -67,6 +71,14 @@
     "cci_period": 20,
     "mfi_period": 14,
     "adx_period": 14,
+    "roc_periods": [5, 10, 20],
+    "aroon_period": 25,
+    "tsi_long": 25,
+    "tsi_short": 13,
+    "uo_periods": [7, 14, 28],
+    "keltner_period": 20,
+    "keltner_multiplier": 2,
+    "donchian_period": 20,
     "psar_af": 0.02,
     "psar_max_af": 0.2
   },
