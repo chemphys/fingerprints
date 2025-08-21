@@ -291,6 +291,179 @@ def calculate_donchian_channels(df, period=20):
     return df
 
 
+def calculate_parabolic_sar(df, af=0.02, max_af=0.2):
+    """Calculate Parabolic SAR - excellent for trend following and buy signals."""
+    high = df['high'].values
+    low = df['low'].values
+    close = df['close'].values
+    
+    psar = np.zeros(len(df))
+    ep = np.zeros(len(df))
+    af_values = np.zeros(len(df))
+    
+    # Initialize first values
+    psar[0] = low[0]
+    ep[0] = high[0]
+    af_values[0] = af
+    uptrend = True
+    
+    for i in range(1, len(df)):
+        if uptrend:
+            psar[i] = psar[i-1] + af_values[i-1] * (ep[i-1] - psar[i-1])
+            
+            # Check for trend reversal
+            if low[i] <= psar[i]:
+                uptrend = False
+                psar[i] = ep[i-1]
+                ep[i] = low[i]
+                af_values[i] = af
+            else:
+                # Continue uptrend
+                if high[i] > ep[i-1]:
+                    ep[i] = high[i]
+                    af_values[i] = min(af_values[i-1] + af, max_af)
+                else:
+                    ep[i] = ep[i-1]
+                    af_values[i] = af_values[i-1]
+        else:
+            psar[i] = psar[i-1] + af_values[i-1] * (ep[i-1] - psar[i-1])
+            
+            # Check for trend reversal
+            if high[i] >= psar[i]:
+                uptrend = True
+                psar[i] = ep[i-1]
+                ep[i] = high[i]
+                af_values[i] = af
+            else:
+                # Continue downtrend
+                if low[i] < ep[i-1]:
+                    ep[i] = low[i]
+                    af_values[i] = min(af_values[i-1] + af, max_af)
+                else:
+                    ep[i] = ep[i-1]
+                    af_values[i] = af_values[i-1]
+    
+    df['psar'] = psar
+    return df
+
+
+def calculate_ichimoku(df, tenkan_period=9, kijun_period=26, senkou_b_period=52):
+    """Calculate Ichimoku Cloud components - powerful for trend identification."""
+    # Tenkan-sen (Conversion Line)
+    tenkan_high = df['high'].rolling(window=tenkan_period).max()
+    tenkan_low = df['low'].rolling(window=tenkan_period).min()
+    df['ichimoku_tenkan'] = (tenkan_high + tenkan_low) / 2
+    
+    # Kijun-sen (Base Line)
+    kijun_high = df['high'].rolling(window=kijun_period).max()
+    kijun_low = df['low'].rolling(window=kijun_period).min()
+    df['ichimoku_kijun'] = (kijun_high + kijun_low) / 2
+    
+    # Senkou Span A (Leading Span A)
+    df['ichimoku_senkou_a'] = ((df['ichimoku_tenkan'] + df['ichimoku_kijun']) / 2).shift(kijun_period)
+    
+    # Senkou Span B (Leading Span B)
+    senkou_b_high = df['high'].rolling(window=senkou_b_period).max()
+    senkou_b_low = df['low'].rolling(window=senkou_b_period).min()
+    df['ichimoku_senkou_b'] = ((senkou_b_high + senkou_b_low) / 2).shift(kijun_period)
+    
+    # Chikou Span (Lagging Span)
+    df['ichimoku_chikou'] = df['close'].shift(-kijun_period)
+    
+    return df
+
+
+def calculate_vwap(df):
+    """Calculate Volume Weighted Average Price - excellent for intraday signals."""
+    typical_price = (df['high'] + df['low'] + df['close']) / 3
+    vwap = (typical_price * df['volume']).cumsum() / df['volume'].cumsum()
+    df['vwap'] = vwap
+    return df
+
+
+def calculate_elder_ray(df, period=13):
+    """Calculate Elder Ray Index (Bull/Bear Power) - great for momentum."""
+    ema = df['close'].ewm(span=period).mean()
+    df[f'bull_power_{period}'] = df['high'] - ema
+    df[f'bear_power_{period}'] = df['low'] - ema
+    return df
+
+
+def calculate_chaikin_oscillator(df, fast=3, slow=10):
+    """Calculate Chaikin Oscillator - combines price and volume momentum."""
+    # Money Flow Multiplier
+    mf_multiplier = ((df['close'] - df['low']) - (df['high'] - df['close'])) / (df['high'] - df['low'])
+    mf_multiplier = mf_multiplier.fillna(0)
+    
+    # Money Flow Volume
+    mf_volume = mf_multiplier * df['volume']
+    
+    # Accumulation/Distribution Line
+    ad_line = mf_volume.cumsum()
+    
+    # Chaikin Oscillator
+    df['chaikin_osc'] = ad_line.ewm(span=fast).mean() - ad_line.ewm(span=slow).mean()
+    
+    return df
+
+
+def calculate_awesome_oscillator(df, fast=5, slow=34):
+    """Calculate Awesome Oscillator - momentum indicator using median prices."""
+    median_price = (df['high'] + df['low']) / 2
+    ao = median_price.rolling(window=fast).mean() - median_price.rolling(window=slow).mean()
+    df['awesome_osc'] = ao
+    return df
+
+
+def calculate_price_channels(df, period=20):
+    """Calculate Price Channels - breakout indicator."""
+    df[f'price_channel_upper_{period}'] = df['close'].rolling(window=period).max()
+    df[f'price_channel_lower_{period}'] = df['close'].rolling(window=period).min()
+    df[f'price_channel_middle_{period}'] = (df[f'price_channel_upper_{period}'] + df[f'price_channel_lower_{period}']) / 2
+    return df
+
+
+def calculate_linear_regression(df, period=14):
+    """Calculate Linear Regression Line and R-squared - trend strength."""
+    def linear_reg_slope(series):
+        if len(series) < 2:
+            return np.nan
+        x = np.arange(len(series))
+        y = series.values
+        slope = np.polyfit(x, y, 1)[0]
+        return slope
+    
+    def r_squared(series):
+        if len(series) < 2:
+            return np.nan
+        x = np.arange(len(series))
+        y = series.values
+        correlation_matrix = np.corrcoef(x, y)
+        correlation = correlation_matrix[0, 1]
+        return correlation ** 2
+    
+    df[f'lr_slope_{period}'] = df['close'].rolling(window=period).apply(linear_reg_slope)
+    df[f'lr_rsquared_{period}'] = df['close'].rolling(window=period).apply(r_squared)
+    
+    return df
+
+
+def calculate_momentum_indicators(df):
+    """Calculate various momentum indicators for buy signal detection."""
+    # Price Rate of Change variations
+    df['proc_1'] = df['close'].pct_change(1) * 100
+    df['proc_3'] = df['close'].pct_change(3) * 100
+    
+    # Acceleration (rate of change of momentum)
+    df['acceleration_5'] = df['close'].pct_change(5).diff()
+    
+    # Relative momentum (current vs average momentum)
+    momentum_5 = df['close'].pct_change(5)
+    df['rel_momentum_5'] = momentum_5 / momentum_5.rolling(window=10).mean()
+    
+    return df
+
+
 def calculate_all_indicators(df, config):
     """Calculate all indicators based on configuration."""
     # Make a copy to avoid SettingWithCopyWarning
@@ -387,5 +560,50 @@ def calculate_all_indicators(df, config):
         df = calculate_donchian_channels(df, indicators_config['donchian_period'])
     else:
         df = calculate_donchian_channels(df, 20)  # Default
+    
+    # Calculate new buy-focused indicators
+    if 'psar_af' in indicators_config and 'psar_max_af' in indicators_config:
+        df = calculate_parabolic_sar(df, indicators_config['psar_af'], indicators_config['psar_max_af'])
+    else:
+        df = calculate_parabolic_sar(df, 0.02, 0.2)  # Default
+    
+    if indicators_config.get('ichimoku_enabled', True):
+        tenkan = indicators_config.get('ichimoku_tenkan', 9)
+        kijun = indicators_config.get('ichimoku_kijun', 26)
+        senkou_b = indicators_config.get('ichimoku_senkou_b', 52)
+        df = calculate_ichimoku(df, tenkan, kijun, senkou_b)
+    
+    if indicators_config.get('vwap_enabled', True):
+        df = calculate_vwap(df)
+    
+    if 'elder_ray_period' in indicators_config:
+        df = calculate_elder_ray(df, indicators_config['elder_ray_period'])
+    else:
+        df = calculate_elder_ray(df, 13)  # Default
+    
+    if indicators_config.get('chaikin_enabled', True):
+        fast = indicators_config.get('chaikin_fast', 3)
+        slow = indicators_config.get('chaikin_slow', 10)
+        df = calculate_chaikin_oscillator(df, fast, slow)
+    
+    if indicators_config.get('awesome_osc_enabled', True):
+        fast = indicators_config.get('awesome_fast', 5)
+        slow = indicators_config.get('awesome_slow', 34)
+        df = calculate_awesome_oscillator(df, fast, slow)
+    
+    if 'price_channel_periods' in indicators_config:
+        for period in indicators_config['price_channel_periods']:
+            df = calculate_price_channels(df, period)
+    else:
+        df = calculate_price_channels(df, 20)  # Default
+    
+    if 'linear_regression_periods' in indicators_config:
+        for period in indicators_config['linear_regression_periods']:
+            df = calculate_linear_regression(df, period)
+    else:
+        df = calculate_linear_regression(df, 14)  # Default
+    
+    # Always calculate momentum indicators
+    df = calculate_momentum_indicators(df)
     
     return df
