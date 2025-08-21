@@ -95,8 +95,8 @@ def get_evaluation_dates(df, target_date, n_days_back):
     return valid_dates[-n_days_back:]
 
 
-def classify_future_movement(df, signal_date, n_days_forward, percent_change):
-    """Classify future price movement from signal date."""
+def classify_future_movement(df, signal_date, n_days_forward, percent_change, column_to_check='high'):
+    """Classify future price movement from signal date using same logic as fingerprints."""
     signal_date = pd.to_datetime(signal_date)
     
     # Handle timezone awareness
@@ -117,20 +117,21 @@ def classify_future_movement(df, signal_date, n_days_forward, percent_change):
     if len(future_data) == 0:
         return 'UNKNOWN'
     
-    # Find max high in future period
-    max_high = future_data['high'].max()
-    max_increase = (max_high - signal_close) / signal_close
+    # Find max value in specified column in future period
+    max_future_value = future_data[column_to_check].max()
+    value_increase = (max_future_value - signal_close) / signal_close
     
     # Find min low in future period  
     min_low = future_data['low'].min()
-    max_decrease = (signal_close - min_low) / signal_close
+    low_decrease = (signal_close - min_low) / signal_close
     
-    # Classify based on movement
-    if max_increase >= percent_change * 2:
+    # Classify based on movement - Fixed to match fingerprints logic
+    # BIG_BUY: value increases >= percent_change, BUY: value increases >= percent_change/2
+    if value_increase >= percent_change:
         return 'BIG_BUY'
-    elif max_increase >= percent_change:
+    elif value_increase >= percent_change / 2:
         return 'BUY'
-    elif max_decrease >= percent_change:
+    elif low_decrease > 0:  # Price decreases
         return 'SELL'
     else:
         return 'NOTHING'
@@ -205,6 +206,8 @@ def check_mode(target_date, buy_selections, sell_selections, config):
     n_days_forward = eval_config['n_dates_forward']
     max_stocks_printed = eval_config['max_stocks_printed']
     percent_change = config['fingerprints']['percent_change']
+    column_to_check = eval_config.get('column_to_check', 'high')
+    skip_sell_signals = eval_config.get('skip_sell_signals', True)
     
     # Get all stock files
     stock_files = glob.glob(os.path.join(data_path, "*.csv"))
@@ -261,7 +264,7 @@ def check_mode(target_date, buy_selections, sell_selections, config):
             
             # Check for signals
             has_buy_signal = len(buy_matches) >= min_expressions
-            has_sell_signal = len(sell_matches) >= min_expressions
+            has_sell_signal = len(sell_matches) >= min_expressions and not skip_sell_signals
             
             if not (has_buy_signal or has_sell_signal):
                 continue
@@ -276,7 +279,7 @@ def check_mode(target_date, buy_selections, sell_selections, config):
             
             # Classify actual future movement
             actual_movement = classify_future_movement(
-                df_with_indicators, eval_date, n_days_forward, percent_change
+                df_with_indicators, eval_date, n_days_forward, percent_change, column_to_check
             )
             
             # Check if signal was correct
@@ -390,6 +393,9 @@ def predict_mode(target_date, buy_selections, sell_selections, config):
         has_buy_signal = len(buy_matches) >= min_expressions
         has_sell_signal = len(sell_matches) >= min_expressions
         
+        # Get skip_sell_signals from config
+        skip_sell_signals = config['evaluation'].get('skip_sell_signals', True)
+        
         if has_buy_signal:
             confidence = calculate_confidence(buy_matches, buy_selections, 'big_buy_score')
             matched_expr_str = '|'.join(buy_matches)
@@ -399,7 +405,7 @@ def predict_mode(target_date, buy_selections, sell_selections, config):
                 'confidence': confidence,
                 'matched_expressions': matched_expr_str
             })
-        elif has_sell_signal:
+        elif has_sell_signal and not skip_sell_signals:
             confidence = calculate_confidence(sell_matches, sell_selections, 'sell_score')
             matched_expr_str = '|'.join(sell_matches)
             results.append({
