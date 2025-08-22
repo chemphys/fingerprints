@@ -3,26 +3,28 @@
     "stock_data_path_d": "/home/mrierari/projects/stocksv2/stocks_data/d",
     "stock_data_path_h": "/home/mrierari/projects/stocksv2/stocks_data/h",
     "min_volume": 200000,
-    "min_price": 2.0,
+    "min_price": 3.0,
     "max_price": 10.0
   },
   "fingerprints": {
-    "n_days": 3,
-    "percent_change": 0.1,
+    "n_days": 1,
+    "percent_change": 0.12,
     "max_grouping_expressions": 3,
     "max_total_combinations": 100000,
-    "max_stocks": null,
-    "output_file": "fingerprint_results.csv"
+    "max_stocks": 20000,
+    "output_file": "fingerprint_results.csv",
+    "print_detailed_output": false,
+    "detailed_output_file": "fingerprint_results_detailed.csv"
   },
   "analyzer": {
     "max_selected_expressions": 10,
     "min_difference_buy": 0.1,
     "min_difference_sell": 0.03,
     "max_expression_usage": 1,
-    "output_buy_file": "fingerprint_results_file_selection_buy.csv",
-    "output_sell_file": "fingerprint_results_file_selection_sell.csv",
-    "output_buy_diverse_file": "fingerprint_results_diverse_selection_buy.csv",
-    "output_sell_diverse_file": "fingerprint_results_diverse_selection_sell.csv",
+    "output_buy_file": "fingerprint_results_file_selection_buy_1day.csv",
+    "output_sell_file": "fingerprint_results_file_selection_sell_1day.csv",
+    "output_buy_diverse_file": "fingerprint_results_diverse_selection_buy_1day.csv",
+    "output_sell_diverse_file": "fingerprint_results_diverse_selection_sell_1day.csv",
     "exclude_patterns": [
       "volatility"
     ]

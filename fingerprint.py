@@ -3,17 +3,18 @@ Enhanced Stock Fingerprint Analysis System with Expression Combinations
 Processes stock data and analyzes individual expressions and their combinations up to max_grouping_expressions.
 """
 
-import os
 import json
+import os
+import glob
 import pandas as pd
 import numpy as np
+import csv
 from datetime import datetime
-from pathlib import Path
-import glob
 from itertools import combinations
 import random
+
 from indicators import calculate_all_indicators
-from expressions import calculate_all_expressions, EXPRESSIONS
+from expressions import EXPRESSIONS, calculate_all_expressions
 
 
 def load_config(config_path='config.json'):
@@ -219,7 +220,36 @@ def classify_signals(df, config):
     return signals
 
 
-def process_single_stock_combinations(file_path, config, valid_conditions, expression_combinations):
+def write_detailed_output(df_clean, combination_results, stock_name, detailed_output_file, combination_names):
+    """Write detailed output for each date/stock with all expression values."""
+    batch_size = 1000  # Write in batches to avoid memory issues
+    batch_data = []
+    
+    for idx, row in df_clean.iterrows():
+        # Create row data: date, stock, signal, then all expression values
+        row_data = [
+            row['date'].strftime('%Y-%m-%d') if pd.notna(row['date']) else '',
+            stock_name,
+            row['signal']
+        ] + combination_results[idx].astype(int).tolist()
+        
+        batch_data.append(row_data)
+        
+        # Write batch when it reaches batch_size
+        if len(batch_data) >= batch_size:
+            with open(detailed_output_file, 'a', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerows(batch_data)
+            batch_data = []
+    
+    # Write remaining data
+    if batch_data:
+        with open(detailed_output_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerows(batch_data)
+
+
+def process_single_stock_combinations(file_path, config, valid_conditions, expression_combinations, detailed_output_file=None, combination_names=None):
     """Process a single stock file and return aggregated results for expression combinations."""
     print(f"Processing: {os.path.basename(file_path)}")
     
@@ -267,6 +297,11 @@ def process_single_stock_combinations(file_path, config, valid_conditions, expre
         combination_results.append(combo_result.values)
     
     combination_results = np.array(combination_results).T  # Transpose to have combinations as columns
+    
+    # Write detailed output if requested
+    if detailed_output_file and combination_names:
+        stock_name = os.path.splitext(os.path.basename(file_path))[0]
+        write_detailed_output(df_clean, combination_results, stock_name, detailed_output_file, combination_names)
     
     # Aggregate combination results by signal type
     big_buy_rows = df_clean[df_clean['signal'] == 'BIG_BUY']
@@ -321,17 +356,24 @@ def main():
     max_grouping_expressions = fp_config.get('max_grouping_expressions', 3)
     max_total_combinations = fp_config.get('max_total_combinations', 50000)
     max_stocks = fp_config.get('max_stocks', None)
+    print_detailed_output = fp_config.get('print_detailed_output', False)
     
-    # Create dated output filename
+    # Create dated output filenames
     base_filename = fp_config.get('output_file', 'fingerprint_results.csv')
+    detailed_filename = fp_config.get('detailed_output_file', 'fingerprint_results_detailed.csv')
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     output_file = f"{timestamp}_{base_filename}"
+    detailed_output_file = f"{timestamp}_{detailed_filename}"
     
     print(f"Maximum expression combinations: {max_grouping_expressions}")
     print(f"Maximum total combinations: {max_total_combinations:,}")
     if max_stocks:
         print(f"Maximum stocks to process: {max_stocks}")
     print(f"Results will be saved to: {output_file}")
+    if print_detailed_output:
+        print(f"Detailed results will be saved to: {detailed_output_file}")
+    else:
+        print("Detailed output disabled (print_detailed_output = false)")
     
     # Filter low-scoring expressions
     good_expressions = filter_low_scoring_expressions()
@@ -344,6 +386,19 @@ def main():
     num_combinations = len(expression_combinations)
     
     print(f"Will analyze {num_combinations} expression combinations")
+    
+    # Initialize detailed output file with headers only if enabled
+    if print_detailed_output:
+        detailed_headers = ['date', 'stock', 'signal'] + combination_names
+        with open(detailed_output_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(detailed_headers)
+        print(f"Initialized detailed output file with {len(detailed_headers)} columns")
+        detailed_output_file_param = detailed_output_file
+        combination_names_param = combination_names
+    else:
+        detailed_output_file_param = None
+        combination_names_param = None
     
     # Find all CSV files
     csv_files = sorted(glob.glob(os.path.join(data_path, "*.csv")))
@@ -387,7 +442,7 @@ def main():
                 continue
             
             # Process the stock with combinations
-            result = process_single_stock_combinations(file_path, config, valid_conditions, expression_combinations)
+            result = process_single_stock_combinations(file_path, config, valid_conditions, expression_combinations, detailed_output_file_param, combination_names_param)
             
             if result is None:
                 skipped_stocks += 1
