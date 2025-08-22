@@ -181,6 +181,7 @@ def classify_signals(df, config):
     fingerprints_config = config['fingerprints']
     n_days = fingerprints_config['n_days']
     percent_change = fingerprints_config['percent_change']
+    column_to_check = fingerprints_config.get('column_to_check', 'high')
     
     signals = []
     
@@ -192,25 +193,26 @@ def classify_signals(df, config):
         
         current_close = df.iloc[i]['close']
         
-        # Look at the next N days to find maximum high
+        # Look at the next N days to find maximum value in specified column
         future_slice = df.iloc[i+1:i+1+n_days]
         if len(future_slice) == 0:
             signals.append('NONE')
             continue
         
-        max_future_high = future_slice['high'].max()
+        max_future_value = future_slice[column_to_check].max()
         min_future_low = future_slice['low'].min()
         
-        # Calculate percentage increase from current close to max future high
-        high_increase = (max_future_high - current_close) / current_close
+        # Calculate percentage increase from current close to max future value
+        value_increase = (max_future_value - current_close) / current_close
         
         # Calculate percentage decrease from current close to min future low
         low_decrease = (current_close - min_future_low) / current_close
         
-        # Classify signal
-        if high_increase >= percent_change:
+        # Classify signal - Fixed to match memory requirements
+        # BIG_BUY: high increases >X% within N days, BUY: high increases X/2 to X%
+        if value_increase >= percent_change:
             signals.append('BIG_BUY')
-        elif high_increase >= percent_change / 2:
+        elif value_increase >= percent_change / 2:
             signals.append('BUY')
         elif low_decrease > 0:  # Price decreases
             signals.append('SELL')

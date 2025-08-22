@@ -932,6 +932,67 @@ EXPRESSIONS = {
     # Early trend reversal signals
     'early_bullish_reversal': lambda df: ((df['rsi_14'] < 30) & (df['rsi_14'] > df['rsi_14'].shift(1)) & (df['macd_histogram'] > df['macd_histogram'].shift(1)) & (df['cci_20'] > df['cci_20'].shift(1))).astype(int),
     'momentum_divergence_bullish': lambda df: ((df['close'] < df['close'].shift(5)) & (df['rsi_14'] > df['rsi_14'].shift(5)) & (df['macd_line'] > df['macd_line'].shift(5))).astype(int),
+    
+    # === NEW BUY-FOCUSED INDICATORS EXPRESSIONS ===
+    
+    # Parabolic SAR buy signals
+    'psar_bullish_signal': lambda df: (df['close'] > df['psar']).astype(int),
+    'psar_trend_change_bull': lambda df: ((df['close'] > df['psar']) & (df['close'].shift(1) <= df['psar'].shift(1))).astype(int),
+    'psar_strong_uptrend': lambda df: ((df['close'] > df['psar']) & (df['psar'] < df['psar'].shift(1))).astype(int),
+    
+    # Ichimoku Cloud buy signals
+    'ichimoku_bullish_cloud': lambda df: ((df['close'] > df['ichimoku_senkou_a']) & (df['close'] > df['ichimoku_senkou_b'])).astype(int),
+    'ichimoku_tenkan_kijun_bull': lambda df: (df['ichimoku_tenkan'] > df['ichimoku_kijun']).astype(int),
+    'ichimoku_price_above_cloud': lambda df: ((df['close'] > df['ichimoku_senkou_a']) & (df['close'] > df['ichimoku_senkou_b']) & (df['ichimoku_tenkan'] > df['ichimoku_kijun'])).astype(int),
+    'ichimoku_tk_cross_bull': lambda df: ((df['ichimoku_tenkan'] > df['ichimoku_kijun']) & (df['ichimoku_tenkan'].shift(1) <= df['ichimoku_kijun'].shift(1))).astype(int),
+    
+    # VWAP buy signals
+    'price_above_vwap': lambda df: (df['close'] > df['vwap']).astype(int),
+    'price_vwap_breakout': lambda df: ((df['close'] > df['vwap']) & (df['close'].shift(1) <= df['vwap'].shift(1)) & (df['volume'] > df['volume_sma_20'])).astype(int),
+    'vwap_momentum_bull': lambda df: ((df['close'] > df['vwap'] * 1.01) & (df['volume'] > df['volume_sma_10'] * 1.2)).astype(int),
+    
+    # Elder Ray buy signals
+    'bull_power_positive': lambda df: (df['bull_power_13'] > 0).astype(int),
+    'bear_power_improving': lambda df: ((df['bear_power_13'] < 0) & (df['bear_power_13'] > df['bear_power_13'].shift(1))).astype(int),
+    'elder_ray_bullish': lambda df: ((df['bull_power_13'] > 0) & (df['bear_power_13'] > df['bear_power_13'].shift(1))).astype(int),
+    'bull_power_acceleration': lambda df: ((df['bull_power_13'] > 0) & (df['bull_power_13'] > df['bull_power_13'].shift(1))).astype(int),
+    
+    # Chaikin Oscillator buy signals
+    'chaikin_bullish': lambda df: (df['chaikin_osc'] > 0).astype(int),
+    'chaikin_momentum_up': lambda df: ((df['chaikin_osc'] > 0) & (df['chaikin_osc'] > df['chaikin_osc'].shift(1))).astype(int),
+    'chaikin_zero_cross_up': lambda df: ((df['chaikin_osc'] > 0) & (df['chaikin_osc'].shift(1) <= 0)).astype(int),
+    
+    # Awesome Oscillator buy signals
+    'awesome_osc_bullish': lambda df: (df['awesome_osc'] > 0).astype(int),
+    'awesome_osc_momentum': lambda df: ((df['awesome_osc'] > 0) & (df['awesome_osc'] > df['awesome_osc'].shift(1))).astype(int),
+    'awesome_osc_saucer': lambda df: ((df['awesome_osc'] > 0) & (df['awesome_osc'].shift(1) < df['awesome_osc'].shift(2)) & (df['awesome_osc'] > df['awesome_osc'].shift(1))).astype(int),
+    
+    # Price Channel breakouts
+    'price_channel_breakout_up': lambda df: ((df['close'] > df['price_channel_upper_20']) & (df['volume'] > df['volume_sma_20'])).astype(int),
+    'price_channel_near_high': lambda df: (df['close'] > df['price_channel_upper_20'] * 0.98).astype(int),
+    'price_channel_momentum': lambda df: ((df['close'] > df['price_channel_middle_20']) & (df['close'] > df['close'].shift(1))).astype(int),
+    
+    # Linear Regression buy signals
+    'lr_slope_bullish': lambda df: (df['lr_slope_14'] > 0).astype(int),
+    'lr_strong_uptrend': lambda df: ((df['lr_slope_14'] > 0) & (df['lr_rsquared_14'] > 0.7)).astype(int),
+    'lr_acceleration': lambda df: ((df['lr_slope_14'] > 0) & (df['lr_slope_14'] > df['lr_slope_14'].shift(1))).astype(int),
+    
+    # Advanced momentum buy signals
+    'proc_1_bullish': lambda df: (df['proc_1'] > 1).astype(int),
+    'proc_3_strong_bull': lambda df: (df['proc_3'] > 3).astype(int),
+    'acceleration_positive': lambda df: (df['acceleration_5'] > 0).astype(int),
+    'rel_momentum_strong': lambda df: (df['rel_momentum_5'] > 1.2).astype(int),
+    
+    # Multi-indicator buy combinations
+    'psar_ichimoku_bull': lambda df: ((df['close'] > df['psar']) & (df['ichimoku_tenkan'] > df['ichimoku_kijun']) & (df['close'] > df['ichimoku_senkou_a'])).astype(int),
+    'vwap_elder_bull': lambda df: ((df['close'] > df['vwap']) & (df['bull_power_13'] > 0) & (df['volume'] > df['volume_sma_10'])).astype(int),
+    'chaikin_awesome_bull': lambda df: ((df['chaikin_osc'] > 0) & (df['awesome_osc'] > 0) & (df['close'] > df['sma_20'])).astype(int),
+    'momentum_breakout_bull': lambda df: ((df['proc_1'] > 1) & (df['lr_slope_14'] > 0) & (df['close'] > df['price_channel_middle_20'])).astype(int),
+    
+    # High-probability buy setups
+    'super_bullish_setup': lambda df: ((df['close'] > df['psar']) & (df['ichimoku_tenkan'] > df['ichimoku_kijun']) & (df['bull_power_13'] > 0) & (df['chaikin_osc'] > 0) & (df['rsi_14'] > 50) & (df['rsi_14'] < 70)).astype(int),
+    'momentum_explosion_bull': lambda df: ((df['proc_1'] > 2) & (df['awesome_osc'] > df['awesome_osc'].shift(1)) & (df['lr_slope_14'] > 0) & (df['volume'] > df['volume_sma_20'] * 1.5)).astype(int),
+    'trend_continuation_bull': lambda df: ((df['close'] > df['vwap']) & (df['close'] > df['psar']) & (df['lr_slope_14'] > 0) & (df['adx_14'] > 25) & (df['plus_di_14'] > df['minus_di_14'])).astype(int),
 }
 
 
